@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prueba de Caché - Productos</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background-color: #f4f6f8;
+      color: #222;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .contenedor {
+      max-width: 820px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 4px;
+    }
+
+    h2 {
+      font-size: 18px;
+      margin-top: 0;
+    }
+
+    .subtitulo {
+      color: #666;
+      margin-top: 0;
+    }
+
+    .tarjeta {
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    /* Botones */
+    .botones {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-sin { background-color: #d9534f; }
+    .btn-con { background-color: #28a745; }
+    .btn-limpiar { background-color: #6c757d; }
+    .btn-historial { background-color: #007bff; }
+
+    /* Resultado */
+    .resultado {
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+    }
+
+    .estado-info {
+      background-color: #e9f2fb;
+      border-color: #b8d4f0;
+      color: #1d4e7e;
+    }
+
+    .estado-ok {
+      background-color: #eaf7ee;
+      border-color: #b7e2c2;
+      color: #1e5e2f;
+    }
+
+    .estado-error {
+      background-color: #fdecea;
+      border-color: #f5c2bd;
+      color: #8a1f17;
+    }
+
+    .datos {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .dato {
+      flex: 1;
+      min-width: 150px;
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 10px;
+    }
+
+    .dato .etiqueta {
+      font-size: 12px;
+      color: #666;
+      text-transform: uppercase;
+    }
+
+    .dato .valor {
+      font-size: 20px;
+      font-weight: bold;
+      margin-top: 4px;
+      color: #222;
+    }
+
+    /* Resumen */
+    .resumen {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    /* Tabla */
+    .tabla-contenedor {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #e3e3e3;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f0f2f5;
+      font-size: 14px;
+    }
+
+    td.numero {
+      text-align: right;
+    }
+
+    .etiqueta-modo {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 13px;
+      color: #fff;
+    }
+
+    .modo-sin { background-color: #d9534f; }
+    .modo-con { background-color: #28a745; }
+
+    .vacio {
+      text-align: center;
+      color: #888;
+    }
+
+    .cabecera-historial {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .cabecera-historial h2 {
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="contenedor">
+    <h1>Comparación de consultas con y sin caché</h1>
+    <p class="subtitulo">API: http://localhost:8080/api/productos</p>
+
+    <!-- Botones de acciones -->
+    <div class="tarjeta">
+      <h2>Acciones</h2>
+      <div class="botones">
+        <button id="btnSinCache" class="btn-sin">Consultar sin caché</button>
+        <button id="btnConCache" class="btn-con">Consultar con caché</button>
+        <button id="btnLimpiarCache" class="btn-limpiar">Limpiar caché</button>
+      </div>
+    </div>
+
+    <!-- Resultado de la última consulta -->
+    <div class="tarjeta">
+      <h2>Resultado</h2>
+      <div id="resultado" class="resultado estado-info">
+        Presiona un botón para realizar una consulta.
+      </div>
+    </div>
+
+    <!-- Historial de mediciones -->
+    <div class="tarjeta">
+      <div class="cabecera-historial">
+        <h2>Historial de mediciones</h2>
+        <button id="btnLimpiarHistorial" class="btn-historial">Limpiar historial</button>
+      </div>
+
+      <div class="resumen">
+        <div class="dato">
+          <div class="etiqueta">Promedio sin caché</div>
+          <div class="valor" id="promedioSin">-</div>
+        </div>
+        <div class="dato">
+          <div class="etiqueta">Promedio con caché</div>
+          <div class="valor" id="promedioCon">-</div>
+        </div>
+        <div class="dato">
+          <div class="etiqueta">Total de mediciones</div>
+          <div class="valor" id="totalMediciones">0</div>
+        </div>
+      </div>
+
+      <div class="tabla-contenedor">
+        <table>
+          <thead>
+            <tr>
+              <th>N.º</th>
+              <th>Modo</th>
+              <th>Registros</th>
+              <th>Tiempo (ms)</th>
+            </tr>
+          </thead>
+          <tbody id="cuerpoTabla">
+            <tr>
+              <td colspan="4" class="vacio">Sin mediciones todavía.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // URL base de la API de Spring Boot
+    const URL_BASE = 'http://localhost:8080/api/productos';
+
+    // Aquí se guardan todas las mediciones realizadas
+    const historial = [];
+
+    // Referencias a los elementos de la página
+    const btnSinCache = document.getElementById('btnSinCache');
+    const btnConCache = document.getElementById('btnConCache');
+    const btnLimpiarCache = document.getElementById('btnLimpiarCache');
+    const btnLimpiarHistorial = document.getElementById('btnLimpiarHistorial');
+    const divResultado = document.getElementById('resultado');
+    const cuerpoTabla = document.getElementById('cuerpoTabla');
+
+    // Eventos de los botones
+    btnSinCache.addEventListener('click', function () {
+      consultarMedicion('sin-cache');
+    });
+
+    btnConCache.addEventListener('click', function () {
+      consultarMedicion('con-cache');
+    });
+
+    btnLimpiarCache.addEventListener('click', limpiarCache);
+
+    btnLimpiarHistorial.addEventListener('click', function () {
+      historial.length = 0;
+      actualizarTabla();
+      mostrarMensaje('estado-info', 'Historial borrado.');
+    });
+
+    // Consulta los endpoints sin-cache y con-cache
+    async function consultarMedicion(endpoint) {
+      bloquearBotones(true);
+      mostrarMensaje('estado-info', 'Consultando /' + endpoint + '...');
+
+      try {
+        const respuesta = await fetch(URL_BASE + '/' + endpoint);
+
+        if (!respuesta.ok) {
+          throw new Error('El servidor respondió con estado ' + respuesta.status);
+        }
+
+        const datos = await respuesta.json();
+
+        if (typeof datos.tiempoMs !== 'number') {
+          throw new Error('La respuesta no tiene el formato esperado.');
+        }
+
+        // Se guarda también el endpoint para calcular los promedios
+        historial.push({
+          endpoint: endpoint,
+          modo: datos.modo,
+          registros: datos.registros,
+          tiempoMs: datos.tiempoMs
+        });
+
+        mostrarMedicion(datos);
+        actualizarTabla();
+      } catch (error) {
+        mostrarError(error);
+      } finally {
+        bloquearBotones(false);
+      }
+    }
+
+    // Llama al endpoint que limpia la caché
+    async function limpiarCache() {
+      bloquearBotones(true);
+      mostrarMensaje('estado-info', 'Limpiando caché...');
+
+      try {
+        const respuesta = await fetch(URL_BASE + '/limpiar-cache');
+
+        if (!respuesta.ok) {
+          throw new Error('El servidor respondió con estado ' + respuesta.status);
+        }
+
+        const datos = await respuesta.json();
+        mostrarMensaje('estado-ok', datos.mensaje || 'Caché limpiada.');
+      } catch (error) {
+        mostrarError(error);
+      } finally {
+        bloquearBotones(false);
+      }
+    }
+
+    // Muestra un texto simple en el panel de resultado
+    function mostrarMensaje(clase, texto) {
+      divResultado.className = 'resultado ' + clase;
+      divResultado.textContent = texto;
+    }
+
+    // Muestra el error en pantalla
+    function mostrarError(error) {
+      let texto = error.message;
+
+      // fetch lanza TypeError cuando no puede conectarse (servidor apagado o CORS)
+      if (error instanceof TypeError) {
+        texto = 'No se pudo conectar con la API. Verifica que Spring Boot esté corriendo en '
+          + 'http://localhost:8080 y que CORS esté habilitado.';
+      }
+
+      mostrarMensaje('estado-error', 'Error: ' + texto);
+    }
+
+    // Muestra los datos de una medición en cuadros
+    function mostrarMedicion(datos) {
+      divResultado.className = 'resultado estado-ok';
+      divResultado.innerHTML = '';
+
+      const contenedor = document.createElement('div');
+      contenedor.className = 'datos';
+
+      contenedor.appendChild(crearDato('Modo', datos.modo));
+      contenedor.appendChild(crearDato('Registros', formatearEntero(datos.registros)));
+      contenedor.appendChild(crearDato('Tiempo', formatearTiempo(datos.tiempoMs) + ' ms'));
+
+      divResultado.appendChild(contenedor);
+    }
+
+    // Crea un cuadro con etiqueta y valor
+    function crearDato(etiqueta, valor) {
+      const div = document.createElement('div');
+      div.className = 'dato';
+
+      const divEtiqueta = document.createElement('div');
+      divEtiqueta.className = 'etiqueta';
+      divEtiqueta.textContent = etiqueta;
+
+      const divValor = document.createElement('div');
+      divValor.className = 'valor';
+      divValor.textContent = valor;
+
+      div.appendChild(divEtiqueta);
+      div.appendChild(divValor);
+      return div;
+    }
+
+    // Vuelve a dibujar la tabla y los promedios
+    function actualizarTabla() {
+      cuerpoTabla.innerHTML = '';
+
+      if (historial.length === 0) {
+        const fila = document.createElement('tr');
+        const celda = document.createElement('td');
+        celda.colSpan = 4;
+        celda.className = 'vacio';
+        celda.textContent = 'Sin mediciones todavía.';
+        fila.appendChild(celda);
+        cuerpoTabla.appendChild(fila);
+      }
+
+      for (let i = 0; i < historial.length; i++) {
+        const medicion = historial[i];
+        const fila = document.createElement('tr');
+
+        const celdaNumero = document.createElement('td');
+        celdaNumero.textContent = i + 1;
+
+        const celdaModo = document.createElement('td');
+        const etiquetaModo = document.createElement('span');
+        etiquetaModo.className = 'etiqueta-modo '
+          + (medicion.endpoint === 'sin-cache' ? 'modo-sin' : 'modo-con');
+        etiquetaModo.textContent = medicion.modo;
+        celdaModo.appendChild(etiquetaModo);
+
+        const celdaRegistros = document.createElement('td');
+        celdaRegistros.className = 'numero';
+        celdaRegistros.textContent = formatearEntero(medicion.registros);
+
+        const celdaTiempo = document.createElement('td');
+        celdaTiempo.className = 'numero';
+        celdaTiempo.textContent = formatearTiempo(medicion.tiempoMs);
+
+        fila.appendChild(celdaNumero);
+        fila.appendChild(celdaModo);
+        fila.appendChild(celdaRegistros);
+        fila.appendChild(celdaTiempo);
+        cuerpoTabla.appendChild(fila);
+      }
+
+      document.getElementById('promedioSin').textContent = calcularPromedio('sin-cache');
+      document.getElementById('promedioCon').textContent = calcularPromedio('con-cache');
+      document.getElementById('totalMediciones').textContent = historial.length;
+    }
+
+    // Calcula el tiempo promedio de un tipo de consulta
+    function calcularPromedio(endpoint) {
+      let suma = 0;
+      let cantidad = 0;
+
+      for (const medicion of historial) {
+        if (medicion.endpoint === endpoint) {
+          suma += medicion.tiempoMs;
+          cantidad++;
+        }
+      }
+
+      if (cantidad === 0) {
+        return '-';
+      }
+      return formatearTiempo(suma / cantidad) + ' ms';
+    }
+
+    // Activa o desactiva los botones mientras se espera la respuesta
+    function bloquearBotones(bloquear) {
+      btnSinCache.disabled = bloquear;
+      btnConCache.disabled = bloquear;
+      btnLimpiarCache.disabled = bloquear;
+    }
+
+    function formatearEntero(numero) {
+      return Number(numero).toLocaleString('es-EC');
+    }
+
+    function formatearTiempo(numero) {
+      return Number(numero).toFixed(2);
+    }
+  </script>
+</body>
+</html>
